@@ -11,6 +11,13 @@ npm run dev      # http://localhost:5173
 npm run build    # gera dist/
 ```
 
+## Deploy
+
+Cada push na `main` publica no GitHub Pages via [.github/workflows/deploy.yml](.github/workflows/deploy.yml):
+https://m-pretti.github.io/skill-tree-cerc/
+
+Os dados ficam no navegador de cada endereço: use Exportar (localhost) → Importar (Pages) para levar o progresso.
+
 ## Como funciona
 
 - **Árvore / Lista**: duas visões dos mesmos cards. Na árvore, cada coluna é uma semana.
