@@ -3,15 +3,45 @@ import { CircleCheck, CircleDashed, Download, Layers, LoaderCircle, RotateCcw, U
 import type { Card } from '../types';
 import { computeLevel } from '../level';
 
-interface Props {
-  cards: Card[];
+interface BackupProps {
   onReset: () => void;
   onExport: () => void;
   onImport: (file: File) => void;
 }
 
-export function ProgressPanel({ cards, onReset, onExport, onImport }: Props) {
+interface Props extends BackupProps {
+  cards: Card[];
+}
+
+export function BackupActions({ onReset, onExport, onImport }: BackupProps) {
   const fileRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="hero-actions">
+      <button type="button" className="ghost-btn" onClick={onExport} title="Baixar backup em JSON">
+        <Download size={15} /> Exportar
+      </button>
+      <button type="button" className="ghost-btn" onClick={() => fileRef.current?.click()} title="Restaurar de um backup JSON">
+        <Upload size={15} /> Importar
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="application/json,.json"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onImport(f);
+          e.target.value = '';
+        }}
+      />
+      <button type="button" className="ghost-btn" onClick={onReset}>
+        <RotateCcw size={15} /> Zerar progresso
+      </button>
+    </div>
+  );
+}
+
+export function ProgressPanel({ cards, ...backup }: Props) {
   const done = cards.filter((c) => c.status === 'done').length;
   const doing = cards.filter((c) => c.status === 'doing').length;
   const todo = cards.length - done - doing;
@@ -38,28 +68,7 @@ export function ProgressPanel({ cards, onReset, onExport, onImport }: Props) {
             </span>
           </h1>
         </div>
-        <div className="hero-actions">
-          <button type="button" className="ghost-btn" onClick={onExport} title="Baixar backup em JSON">
-            <Download size={15} /> Exportar
-          </button>
-          <button type="button" className="ghost-btn" onClick={() => fileRef.current?.click()} title="Restaurar de um backup JSON">
-            <Upload size={15} /> Importar
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json,.json"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onImport(f);
-              e.target.value = '';
-            }}
-          />
-          <button type="button" className="ghost-btn" onClick={onReset}>
-            <RotateCcw size={15} /> Zerar progresso
-          </button>
-        </div>
+        <BackupActions {...backup} />
       </div>
 
       <div className="progress-head">

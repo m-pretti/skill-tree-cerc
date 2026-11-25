@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createSeed } from './seed';
+import { localDay } from './game';
 import { uid, type AppState, type Card, type Status, type Tag, type TagKind } from './types';
 
 const STORAGE_KEY = 'cerc-skill-tree:v1';
@@ -32,6 +33,15 @@ export type CardDraft = Omit<Card, 'id'>;
 
 export const hasNote = (c: { nota?: string }) => Boolean(c.nota?.trim());
 
+/** Carimba o dia da conclusão quando o card vira "done" e limpa quando sai dele. */
+function stamp<T extends Partial<Card>>(next: T, prevStatus?: Status): T {
+  if (next.status === 'done') return prevStatus === 'done' ? next : { ...next, concluidoEm: localDay() };
+  if (!next.concluidoEm) return next;
+  const rest = { ...next };
+  delete rest.concluidoEm;
+  return rest;
+}
+
 export function useSkillTree() {
   const [state, setState] = useState<AppState>(loadState);
 
@@ -46,16 +56,16 @@ export function useSkillTree() {
   const actions = useMemo(
     () => ({
       addCard(draft: CardDraft) {
-        setState((s) => ({ ...s, cards: [...s.cards, { ...draft, id: uid() }] }));
+        setState((s) => ({ ...s, cards: [...s.cards, stamp({ ...draft, id: uid() })] }));
       },
       updateCard(id: string, patch: Partial<CardDraft>) {
-        setState((s) => ({ ...s, cards: s.cards.map((c) => (c.id === id ? { ...c, ...patch } : c)) }));
+        setState((s) => ({ ...s, cards: s.cards.map((c) => (c.id === id ? stamp({ ...c, ...patch }, c.status) : c)) }));
       },
       /** Concluir exige anotação: sem nota, a mudança para "done" é ignorada. */
       setStatus(id: string, status: Status) {
         setState((s) => ({
           ...s,
-          cards: s.cards.map((c) => (c.id === id && (status !== 'done' || hasNote(c)) ? { ...c, status } : c)),
+          cards: s.cards.map((c) => (c.id === id && (status !== 'done' || hasNote(c)) ? stamp({ ...c, status }, c.status) : c)),
         }));
       },
       deleteCard(id: string) {
@@ -77,7 +87,7 @@ export function useSkillTree() {
         });
       },
       resetProgress() {
-        setState((s) => ({ ...s, cards: s.cards.map((c) => ({ ...c, status: 'todo' as Status })) }));
+        setState((s) => ({ ...s, cards: s.cards.map((c) => stamp({ ...c, status: 'todo' as Status }, c.status)) }));
       },
       addTag(kind: TagKind, nome: string, cor: string) {
         setState((s) => ({ ...s, [kind]: [...s[kind], { id: uid(), nome, cor }] }));

@@ -14,6 +14,8 @@ export interface Card {
   trilhaId: string;
   status: Status;
   nota?: string;
+  /** Dia (AAAA-MM-DD, horário local) em que o card foi concluído. Usado na ofensiva e nas missões do dia. */
+  concluidoEm?: string;
 }
 
 export interface AppState {

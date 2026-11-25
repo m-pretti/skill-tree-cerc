@@ -1,8 +1,8 @@
-import { GitFork, List, Plus, Search, SlidersHorizontal } from 'lucide-react';
+import { GitFork, List, Plus, Route, Search, SlidersHorizontal } from 'lucide-react';
 import type { Status, Tag } from '../types';
 import { STATUS_LABEL, STATUS_ORDER } from '../types';
 
-export type View = 'tree' | 'list';
+export type View = 'path' | 'tree' | 'list';
 
 interface Props {
   view: View;
@@ -25,6 +25,9 @@ export function Toolbar(p: Props) {
   return (
     <div className="toolbar">
       <div className="segmented" role="tablist" aria-label="Visualização">
+        <button type="button" role="tab" aria-selected={p.view === 'path'} className={p.view === 'path' ? 'on' : ''} onClick={() => p.onView('path')}>
+          <Route size={15} /> Jornada
+        </button>
         <button type="button" role="tab" aria-selected={p.view === 'tree'} className={p.view === 'tree' ? 'on' : ''} onClick={() => p.onView('tree')}>
           <GitFork size={15} /> Árvore
         </button>

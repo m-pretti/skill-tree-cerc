@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Trophy } from 'lucide-react';
 import { useSkillTree, isValidState, hasNote } from './store';
 import { computeLevel } from './level';
 import type { Card, Status } from './types';
-import { ProgressPanel } from './components/ProgressPanel';
+import { pad2 } from './types';
+import { BackupActions, ProgressPanel } from './components/ProgressPanel';
+import { PathView } from './components/PathView';
+import { Confetti } from './components/Confetti';
 import { Toolbar, type View } from './components/Toolbar';
 import { TreeView } from './components/TreeView';
 import { ListView } from './components/ListView';
@@ -16,9 +19,10 @@ const VIEW_KEY = 'cerc-skill-tree:view';
 
 function readView(): View {
   try {
-    return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'tree';
+    const v = localStorage.getItem(VIEW_KEY);
+    return v === 'list' || v === 'tree' ? v : 'path';
   } catch {
-    return 'tree';
+    return 'path';
   }
 }
 
@@ -31,7 +35,7 @@ export default function App() {
   const [statusFilter, setStatusFilter] = useState<Status | null>(null);
   const [editing, setEditing] = useState<Editing>(null);
   const [taxOpen, setTaxOpen] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ text: string; kind: 'info' | 'level' | 'week' } | null>(null);
 
   useEffect(() => {
     try {
@@ -60,14 +64,28 @@ export default function App() {
     );
   }, [state.cards, eixo, trilha, statusFilter, query]);
 
-  // Comemora quando sobe de level
+  // Comemora level up e semanas fechadas (troféu)
   const done = state.cards.filter((c) => c.status === 'done').length;
   const { level } = computeLevel(done);
+  const completeWeeks = useMemo(
+    () =>
+      weeks.filter((w) => {
+        const all = state.cards.filter((c) => c.semana === w);
+        return all.length > 0 && all.every((c) => c.status === 'done');
+      }),
+    [weeks, state.cards],
+  );
   const prevLevel = useRef(level);
+  const prevComplete = useRef(new Set(completeWeeks));
+  const skipCelebration = useRef(false);
   useEffect(() => {
-    if (level > prevLevel.current) setToast(`Level up! Você chegou ao Level ${level}`);
+    const fresh = completeWeeks.find((w) => !prevComplete.current.has(w));
+    if (skipCelebration.current) skipCelebration.current = false; // não comemora import
+    else if (level > prevLevel.current) setToast({ text: `Level up! Você chegou ao Level ${level}`, kind: 'level' });
+    else if (fresh !== undefined) setToast({ text: `Troféu! Semana ${pad2(fresh)} concluída`, kind: 'week' });
     prevLevel.current = level;
-  }, [level]);
+    prevComplete.current = new Set(completeWeeks);
+  }, [level, completeWeeks]);
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 3200);
@@ -89,9 +107,9 @@ export default function App() {
       const parsed = JSON.parse(await file.text());
       if (!isValidState(parsed)) throw new Error('formato inválido');
       if (confirm(`Importar ${parsed.cards.length} cards? Isso substitui os dados atuais.`)) {
-        prevLevel.current = Number.MAX_SAFE_INTEGER; // não comemora import
+        skipCelebration.current = true;
         actions.replaceState(parsed);
-        setToast('Backup importado');
+        setToast({ text: 'Backup importado', kind: 'info' });
       }
     } catch {
       alert('Não foi possível ler esse arquivo. Use um JSON exportado pela própria Skill Tree.');
@@ -106,16 +124,17 @@ export default function App() {
     else actions.setStatus(card.id, status);
   };
 
+  const backupProps = {
+    onExport: exportJson,
+    onImport: importJson,
+    onReset: () => {
+      if (confirm('Zerar progresso? Todos os cards voltam para "A fazer".')) actions.resetProgress();
+    },
+  };
+
   return (
-    <div className="app">
-      <ProgressPanel
-        cards={state.cards}
-        onExport={exportJson}
-        onImport={importJson}
-        onReset={() => {
-          if (confirm('Zerar progresso? Todos os cards voltam para "A fazer".')) actions.resetProgress();
-        }}
-      />
+    <div className={`app ${view === 'path' ? 'app-path' : ''}`}>
+      {view !== 'path' && <ProgressPanel cards={state.cards} {...backupProps} />}
 
       <Toolbar
         view={view}
@@ -134,7 +153,20 @@ export default function App() {
         onTaxonomy={() => setTaxOpen(true)}
       />
 
-      {view === 'tree' ? (
+      {view === 'path' ? (
+        <PathView
+          weeks={weeks}
+          cards={filtered}
+          allCards={state.cards}
+          eixos={state.eixos}
+          eixoMap={eixoMap}
+          trilhaMap={trilhaMap}
+          onOpen={(card) => setEditing({ mode: 'edit', card })}
+          onNew={(semana) => setEditing({ mode: 'new', semana })}
+          onStatus={changeStatus}
+          backup={<BackupActions {...backupProps} />}
+        />
+      ) : view === 'tree' ? (
         <TreeView
           weeks={weeks}
           cards={filtered}
@@ -184,9 +216,10 @@ export default function App() {
 
       {taxOpen && <TaxonomyModal state={state} actions={actions} onClose={() => setTaxOpen(false)} />}
 
+      {toast?.kind === 'level' && <Confetti />}
       {toast && (
-        <div className="toast" role="status">
-          <Sparkles size={18} /> {toast}
+        <div className={`toast toast-${toast.kind}`} role="status">
+          {toast.kind === 'week' ? <Trophy size={18} /> : <Sparkles size={18} />} {toast.text}
         </div>
       )}
     </div>
