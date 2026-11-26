@@ -184,6 +184,7 @@ export default function App() {
           cards={filtered}
           eixoMap={eixoMap}
           trilhaMap={trilhaMap}
+          actions={actions}
           onOpen={(card) => setEditing({ mode: 'edit', card })}
           onStatus={changeStatus}
         />
