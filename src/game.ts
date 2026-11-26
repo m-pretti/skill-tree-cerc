@@ -37,8 +37,21 @@ export function doneToday(cards: Card[], today = localDay()): number {
   return cards.filter((c) => c.status === 'done' && c.concluidoEm === today).length;
 }
 
-/** Cores das unidades (semanas) do caminho, dentro da paleta CERC. */
-export const UNIT_COLORS = ['#1f6fd1', '#13908a', '#0a9cc4', '#5b5fc7', '#0b4f9c', '#2a9d6f'];
+/** Cores pastéis das unidades (semanas): fundo suave, tom médio e texto. */
+export interface UnitColor {
+  soft: string;
+  base: string;
+  ink: string;
+}
+
+export const UNIT_COLORS: UnitColor[] = [
+  { soft: '#e3eefa', base: '#b5d0f0', ink: '#2d5784' }, // azul
+  { soft: '#ddf2ea', base: '#a8dcc8', ink: '#256b56' }, // menta
+  { soft: '#ebe7f8', base: '#c8bfee', ink: '#544893' }, // lavanda
+  { soft: '#fdebdd', base: '#f5c7a6', ink: '#8c522b' }, // pêssego
+  { soft: '#dcf1f6', base: '#a6d7e5', ink: '#23667a' }, // céu
+  { soft: '#f9e3ea', base: '#efbacb', ink: '#8a3d58' }, // rosa
+];
 
 export const unitColor = (semana: number) => UNIT_COLORS[(semana - 1) % UNIT_COLORS.length];
 

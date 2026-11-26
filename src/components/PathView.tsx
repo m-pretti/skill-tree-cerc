@@ -1,20 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import {
-  BookOpen,
-  Boxes,
-  Check,
-  Crown,
-  Flame,
-  NotebookText,
-  Pencil,
-  Play,
-  Plus,
-  Server,
-  Star,
-  Target,
-  Trophy,
-  Zap,
-} from 'lucide-react';
+import { Check, Plus } from 'lucide-react';
 import type { Card, Status, Tag } from '../types';
 import { pad2 } from '../types';
 import { computeLevel } from '../level';
@@ -34,12 +19,10 @@ interface Props {
   backup: ReactNode;
 }
 
-const EIXO_ICON: Record<string, typeof Star> = { infra: Server, stack: Boxes, estudo: BookOpen };
-
-function NodeIcon({ card }: { card: Card }) {
-  if (card.status === 'done') return <Check size={34} strokeWidth={3.4} />;
-  const Icon = EIXO_ICON[card.eixoId] ?? Star;
-  return <Icon size={30} strokeWidth={2.6} />;
+/** Concluído mostra um check; os demais, o número do passo na semana. */
+function NodeMark({ card, step }: { card: Card; step: number }) {
+  if (card.status === 'done') return <Check size={24} strokeWidth={3} />;
+  return <span className="node-num">{step}</span>;
 }
 
 export function PathView({ weeks, cards, allCards, eixos, eixoMap, trilhaMap, onOpen, onNew, onStatus, backup }: Props) {
@@ -80,19 +63,23 @@ export function PathView({ weeks, cards, allCards, eixos, eixoMap, trilhaMap, on
           const complete = weekAll.length > 0 && weekDone === weekAll.length;
           const color = unitColor(w);
           return (
-            <div key={w} className="unit" style={{ '--u': color } as CSSProperties}>
+            <div
+              key={w}
+              className="unit"
+              style={{ '--u-soft': color.soft, '--u': color.base, '--u-ink': color.ink } as CSSProperties}
+            >
               <header className="unit-banner">
                 <div>
                   <p className="unit-kicker">Semana {pad2(w)}</p>
                   <h2 className="unit-title">
-                    {complete ? 'Unidade dominada!' : `${weekDone} de ${weekAll.length} skills`}
+                    {complete ? 'Semana concluída' : `${weekDone} de ${weekAll.length} skills`}
                   </h2>
                   <div className="unit-bar" aria-hidden>
                     <span style={{ width: weekAll.length ? `${(weekDone / weekAll.length) * 100}%` : 0 }} />
                   </div>
                 </div>
                 <button type="button" className="unit-add" onClick={() => onNew(w)} title={`Adicionar card na semana ${pad2(w)}`}>
-                  <Plus size={20} strokeWidth={3} />
+                  <Plus size={18} strokeWidth={2.4} />
                 </button>
               </header>
 
@@ -119,7 +106,7 @@ export function PathView({ weeks, cards, allCards, eixos, eixoMap, trilhaMap, on
                           aria-expanded={isOpen}
                           aria-label={`${c.titulo} — ${c.status === 'done' ? 'concluído' : c.status === 'doing' ? 'em curso' : 'a fazer'}`}
                         >
-                          <NodeIcon card={c} />
+                          <NodeMark card={c} step={i + 1} />
                         </button>
                         <span className="node-label">{c.titulo}</span>
                       </div>
@@ -131,9 +118,7 @@ export function PathView({ weeks, cards, allCards, eixos, eixoMap, trilhaMap, on
                           </p>
                           <h3>{c.titulo}</h3>
                           {c.nota ? (
-                            <p className="pop-note">
-                              <NotebookText size={14} /> {c.nota}
-                            </p>
+                            <p className="pop-note">{c.nota}</p>
                           ) : (
                             <p className="pop-note muted">
                               {c.status === 'done' ? 'Concluído antes da regra de anotação.' : 'Ao concluir, registre o que aprendeu.'}
@@ -142,7 +127,7 @@ export function PathView({ weeks, cards, allCards, eixos, eixoMap, trilhaMap, on
                           <div className="pop-actions">
                             {c.status === 'todo' && (
                               <button type="button" className="pop-primary" onClick={() => onStatus(c, 'doing')}>
-                                <Play size={16} strokeWidth={3} /> Começar
+                                Começar
                               </button>
                             )}
                             {c.status === 'doing' && (
@@ -154,12 +139,12 @@ export function PathView({ weeks, cards, allCards, eixos, eixoMap, trilhaMap, on
                                   onStatus(c, 'done');
                                 }}
                               >
-                                <Check size={16} strokeWidth={3} /> Concluir +{XP_PER_CARD} XP
+                                Concluir (+{XP_PER_CARD} XP)
                               </button>
                             )}
                             {c.status === 'done' && (
                               <button type="button" className="pop-primary" onClick={() => onOpen(c)}>
-                                <NotebookText size={16} strokeWidth={2.6} /> Revisar
+                                Revisar
                               </button>
                             )}
                             <button
@@ -170,7 +155,7 @@ export function PathView({ weeks, cards, allCards, eixos, eixoMap, trilhaMap, on
                                 onOpen(c);
                               }}
                             >
-                              <Pencil size={15} strokeWidth={2.6} /> Editar
+                              Editar
                             </button>
                           </div>
                         </div>
@@ -181,13 +166,8 @@ export function PathView({ weeks, cards, allCards, eixos, eixoMap, trilhaMap, on
 
                 {items.length === 0 && <li className="path-empty">Nenhum card com esses filtros</li>}
 
-                <li className="path-row" style={{ '--x': '0px' } as CSSProperties}>
-                  <div className="node-wrap">
-                    <span className={`node trophy ${complete ? 'is-won' : ''}`} aria-hidden>
-                      <Trophy size={34} strokeWidth={2.6} />
-                    </span>
-                    <span className="node-label">{complete ? 'Semana concluída!' : `${weekDone}/${weekAll.length} para o troféu`}</span>
-                  </div>
+                <li className={`path-end ${complete ? 'is-won' : ''}`}>
+                  {complete ? 'Semana concluída' : `Faltam ${weekAll.length - weekDone} para fechar a semana`}
                 </li>
               </ol>
             </div>
@@ -195,7 +175,7 @@ export function PathView({ weeks, cards, allCards, eixos, eixoMap, trilhaMap, on
         })}
 
         <button type="button" className="path-new-week" onClick={() => onNew(nextWeek)}>
-          <Plus size={20} strokeWidth={3} /> Começar a Semana {pad2(nextWeek)}
+          <Plus size={18} strokeWidth={2.4} /> Começar a Semana {pad2(nextWeek)}
         </button>
       </section>
 
@@ -235,22 +215,22 @@ function Hud({ cards, weeks }: { cards: Card[]; weeks: number[] }) {
 
   return (
     <div className="hud">
-      <span className={`hud-item streak ${streak ? 'on' : ''}`} title="Ofensiva: dias seguidos concluindo cards">
-        <Flame size={22} strokeWidth={2.6} /> {streak}
+      <span className="hud-item" title="Dias seguidos concluindo cards">
+        <b>{streak}</b> {streak === 1 ? 'dia seguido' : 'dias seguidos'}
       </span>
-      <span className="hud-item xp" title="XP total">
-        <Zap size={22} strokeWidth={2.6} /> {xp}
+      <span className="hud-item" title="XP total">
+        <b>{xp}</b> XP
         {gain && (
           <em key={gain.key} className="xp-gain">
             +{gain.n}
           </em>
         )}
       </span>
-      <span className="hud-item level" title="Level atual">
-        <Crown size={22} strokeWidth={2.6} /> {level}
+      <span className="hud-item" title="Level atual">
+        Level <b>{level}</b>
       </span>
-      <span className="hud-item trophies" title="Semanas concluídas">
-        <Trophy size={21} strokeWidth={2.6} /> {trophies}
+      <span className="hud-item" title="Semanas concluídas">
+        <b>{trophies}</b> {trophies === 1 ? 'semana fechada' : 'semanas fechadas'}
       </span>
     </div>
   );
@@ -286,13 +266,11 @@ function Sidebar({ cards, weeks, eixos, backup }: { cards: Card[]; weeks: number
   const openWeekDone = openWeekAll.filter((c) => c.status === 'done').length;
 
   const quests = [
-    { icon: <Zap size={22} />, cls: 'q-xp', label: `Ganhe ${DAILY_XP_GOAL} XP hoje`, value: today * XP_PER_CARD, max: DAILY_XP_GOAL },
-    { icon: <Target size={22} />, cls: 'q-card', label: 'Conclua 1 card hoje', value: Math.min(today, 1), max: 1 },
+    { label: `Ganhe ${DAILY_XP_GOAL} XP hoje`, value: today * XP_PER_CARD, max: DAILY_XP_GOAL },
+    { label: 'Conclua 1 card hoje', value: Math.min(today, 1), max: 1 },
     ...(openWeek
       ? [
           {
-            icon: <Trophy size={22} />,
-            cls: 'q-week',
             label: `Feche a Semana ${pad2(openWeek)}`,
             value: openWeekDone,
             max: openWeekAll.length,
@@ -304,16 +282,13 @@ function Sidebar({ cards, weeks, eixos, backup }: { cards: Card[]; weeks: number
   return (
     <aside className="path-side">
       <div className="side-card level-card">
-        <div className="level-badge">
-          <Crown size={28} strokeWidth={2.6} />
-          <span>{level}</span>
-        </div>
+        <div className="level-badge">{level}</div>
         <div className="level-info">
           <h3>Level {level}</h3>
           <p>
             Faltam <b>{need - inLevel}</b> {need - inLevel === 1 ? 'card' : 'cards'} para o Level {level + 1}
           </p>
-          <Meter value={inLevel} max={need} color="#ffb020" />
+          <Meter value={inLevel} max={need} />
         </div>
       </div>
 
@@ -321,17 +296,14 @@ function Sidebar({ cards, weeks, eixos, backup }: { cards: Card[]; weeks: number
         <div className="side-head">
           <h3>Missões do dia</h3>
           <span className={`streak-pill ${streak ? 'on' : ''}`}>
-            <Flame size={15} strokeWidth={2.8} /> {streak} {streak === 1 ? 'dia' : 'dias'}
+            {streak} {streak === 1 ? 'dia' : 'dias'}
           </span>
         </div>
         <ul className="quests">
           {quests.map((q) => (
             <li key={q.label} className={q.value >= q.max ? 'is-done' : ''}>
-              <span className={`quest-icon ${q.cls}`}>{q.icon}</span>
-              <div>
-                <p>{q.label}</p>
-                <Meter value={q.value} max={q.max} />
-              </div>
+              <p>{q.label}</p>
+              <Meter value={q.value} max={q.max} />
             </li>
           ))}
         </ul>
@@ -346,16 +318,12 @@ function Sidebar({ cards, weeks, eixos, backup }: { cards: Card[]; weeks: number
             const all = cards.filter((c) => c.eixoId === e.id);
             if (!all.length) return null;
             const d = all.filter((c) => c.status === 'done').length;
-            const Icon = EIXO_ICON[e.id] ?? Star;
             return (
               <li key={e.id} style={{ '--tag': e.cor } as CSSProperties}>
-                <span className="eixo-icon">
-                  <Icon size={18} strokeWidth={2.6} />
-                </span>
-                <div>
-                  <p>{e.nome}</p>
-                  <Meter value={d} max={all.length} color={e.cor} />
-                </div>
+                <p>
+                  <span className="eixo-dot" aria-hidden /> {e.nome}
+                </p>
+                <Meter value={d} max={all.length} color={`color-mix(in srgb, ${e.cor} 38%, white)`} />
               </li>
             );
           })}
